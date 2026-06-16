@@ -40,6 +40,7 @@ class Sandbox:
             tier=self.spec.tier,
             status=self.status,
             created_at=self.created_at,
+            trace_id=self.spec.trace_id,
         )
 
 
@@ -65,6 +66,7 @@ class Runtime:
 
     async def exec(self, sandbox_id: str, req: ExecRequest) -> ExecResponse:
         sandbox = self._get(sandbox_id)
+        trace_id = req.trace_id or sandbox.spec.trace_id
         allowed, reason = can_exec(sandbox.spec.tier, req.command)
         if not allowed:
             return ExecResponse(
@@ -73,6 +75,8 @@ class Runtime:
                 exit_code=1,
                 blocked=True,
                 block_reason=reason,
+                trace_id=trace_id,
+                run_id=sandbox.id,
             )
 
         # Human-approval gate for deploy-provision and money-legal tiers
@@ -86,6 +90,8 @@ class Runtime:
                     f"Tier '{sandbox.spec.tier}' requires explicit human approval "
                     "before any command execution"
                 ),
+                trace_id=trace_id,
+                run_id=sandbox.id,
             )
 
         try:
@@ -103,36 +109,43 @@ class Runtime:
                 stdout=stdout.decode("utf-8", errors="replace"),
                 stderr=stderr.decode("utf-8", errors="replace"),
                 exit_code=proc.returncode or 0,
+                trace_id=trace_id,
+                run_id=sandbox.id,
             )
         except asyncio.TimeoutError:
             return ExecResponse(
                 stdout="",
                 stderr="Command timed out",
                 exit_code=124,
+                trace_id=trace_id,
+                run_id=sandbox.id,
             )
 
     async def write_file(self, sandbox_id: str, req: WriteFileRequest) -> dict[str, Any]:
         sandbox = self._get(sandbox_id)
+        trace_id = req.trace_id or sandbox.spec.trace_id
         allowed, reason = can_write(sandbox.spec.tier)
         if not allowed:
-            return {"success": False, "error": reason}
+            return {"success": False, "error": reason, "trace_id": trace_id, "run_id": sandbox.id}
         target = sandbox.workdir / req.path.lstrip("/")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(req.content)
-        return {"success": True, "path": str(target)}
+        return {"success": True, "path": str(target), "trace_id": trace_id, "run_id": sandbox.id}
 
-    async def read_file(self, sandbox_id: str, path: str) -> dict[str, Any]:
+    async def read_file(self, sandbox_id: str, path: str, trace_id: str | None = None) -> dict[str, Any]:
         sandbox = self._get(sandbox_id)
+        resolved_trace_id = trace_id or sandbox.spec.trace_id
         target = sandbox.workdir / path.lstrip("/")
         if not target.exists():
-            return {"success": False, "error": "File not found"}
-        return {"success": True, "path": str(target), "content": target.read_text()}
+            return {"success": False, "error": "File not found", "trace_id": resolved_trace_id, "run_id": sandbox.id}
+        return {"success": True, "path": str(target), "content": target.read_text(), "trace_id": resolved_trace_id, "run_id": sandbox.id}
 
     async def commit(self, sandbox_id: str, req: CommitRequest) -> dict[str, Any]:
         sandbox = self._get(sandbox_id)
+        trace_id = req.trace_id or sandbox.spec.trace_id
         allowed, reason = can_deploy(sandbox.spec.tier)
         if not allowed:
-            return {"success": False, "error": reason}
+            return {"success": False, "error": reason, "trace_id": trace_id, "run_id": sandbox.id}
         # Scaffold: real implementation would push to git remote with human approval.
         return {
             "success": False,
@@ -140,6 +153,8 @@ class Runtime:
                 "Commit/push is gated. Create an approval record in "
                 "huvia-core.rid_submission_approvals (or equivalent) first."
             ),
+            "trace_id": trace_id,
+            "run_id": sandbox.id,
         }
 
     def _get(self, sandbox_id: str) -> Sandbox:

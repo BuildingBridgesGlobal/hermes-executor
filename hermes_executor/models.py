@@ -22,6 +22,7 @@ class SandboxCreateRequest(BaseModel):
     tier: PermissionTier = Field(default=PermissionTier.READ_ONLY)
     image: str = Field(default="python:3.11-slim", description="Docker image")
     ttl_seconds: int = Field(default=3600, ge=60, le=86400)
+    trace_id: str | None = Field(default=None, description="Cross-service trace id")
 
 
 class SandboxResponse(BaseModel):
@@ -31,12 +32,14 @@ class SandboxResponse(BaseModel):
     tier: PermissionTier
     status: str
     created_at: str
+    trace_id: str | None = None
 
 
 class ExecRequest(BaseModel):
     command: list[str]
     workdir: str | None = None
     timeout_seconds: int = Field(default=60, ge=1, le=300)
+    trace_id: str | None = Field(default=None, description="Cross-service trace id")
 
 
 class ExecResponse(BaseModel):
@@ -45,22 +48,27 @@ class ExecResponse(BaseModel):
     exit_code: int
     blocked: bool = False
     block_reason: str | None = None
+    trace_id: str | None = None
+    run_id: str | None = None
 
 
 class WriteFileRequest(BaseModel):
     path: str
     content: str
+    trace_id: str | None = Field(default=None, description="Cross-service trace id")
 
 
 class ReadFileResponse(BaseModel):
     path: str
     content: str
+    trace_id: str | None = None
 
 
 class CommitRequest(BaseModel):
     repo_url: str | None = None
     message: str = "Automated commit by HuVia agent"
     branch: str | None = None
+    trace_id: str | None = Field(default=None, description="Cross-service trace id")
 
 
 class ActionLog(BaseModel):
@@ -72,3 +80,4 @@ class ActionLog(BaseModel):
     payload: dict[str, Any]
     result_summary: str
     timestamp: str
+    trace_id: str | None = None
