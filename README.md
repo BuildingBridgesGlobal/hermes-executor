@@ -6,6 +6,16 @@ Sandboxed terminal/execution service for HuVia agents.
 
 Separates agent reasoning (in `huvia-core`) from command execution. Agents request actions through this service; the service runs them inside ephemeral Docker sandboxes with tiered permissions and human gates.
 
+## Environment variables
+
+Copy `.env.example` to `.env` and fill in:
+
+- `HUVIA_API_KEY` — required shared API key. huvia-core sends this in the `Authorization: Bearer ...` header.
+- `SANDBOX_BASE_DIR` — optional absolute base directory for sandbox working directories. Defaults to `/tmp/hermes-sandboxes`.
+- `PORT` — optional server port. Defaults to `8000`.
+
+The executor validates that `HUVIA_API_KEY` is configured at startup and rejects unauthenticated requests.
+
 ## Permission tiers
 
 | Tier | Allowed operations | Human approval |
