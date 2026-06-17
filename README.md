@@ -10,11 +10,12 @@ Separates agent reasoning (in `huvia-core`) from command execution. Agents reque
 
 Copy `.env.example` to `.env` and fill in:
 
-- `HUVIA_API_KEY` — required shared API key. huvia-core sends this in the `Authorization: Bearer ...` header.
+- `HERMES_EXECUTOR_API_KEY` — required shared API key. huvia-core sends this in the `Authorization: Bearer ...` header.
+- `HUVIA_API_KEY` — legacy fallback accepted if `HERMES_EXECUTOR_API_KEY` is not set.
 - `SANDBOX_BASE_DIR` — optional absolute base directory for sandbox working directories. Defaults to `/tmp/hermes-sandboxes`.
 - `PORT` — optional server port. Defaults to `8000`.
 
-The executor validates that `HUVIA_API_KEY` is configured at startup and rejects unauthenticated requests.
+The executor validates that an API key is configured at startup and rejects unauthenticated requests.
 
 ## Permission tiers
 

@@ -65,6 +65,10 @@ async def lifespan(_app: FastAPI):
             "HERMES_EXECUTOR_API_KEY (or legacy HUVIA_API_KEY) is required. "
             "Set it before starting Hermes Executor."
         )
+    # Validate sandbox base directory early so bad config fails at startup.
+    from .runtime import _sandbox_base_dir
+
+    _sandbox_base_dir()
     yield
 
 
